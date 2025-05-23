@@ -8,6 +8,7 @@
 - PPO loss-based agent upgrade*[2] on GPU
 - An Intuitive Tensorboard-based training process demonstration
 
+The framework of CassieGymRL: PPO is All You Need is shown below:
 ![The overall framework of our method.](./readme-images/framework.svg)
 
 
@@ -60,6 +61,7 @@ The authors would like to express heartfelt thanks to Prof. Guillaume Adrien Sar
 
 ## Reference
 *[1] Adapted from https://github.com/osudrl/cassie-mujoco-sim, https://github.com/lbermillo/cassie-curriculum-learning/ and https://github.com/XHN-1/Cassie_mujoco_RL.*
+
 *[2] Adapted from https://github.com/Lizhi-sjtu/DRL-code-pytorch*
 
 
@@ -67,4 +69,4 @@ The authors would like to express heartfelt thanks to Prof. Guillaume Adrien Sar
 
 Appendice A: Gait Cycle Reward Design (in Gym)
 
-![The overall framework of our method.](./readme-images/gait_cycle_design.svg)
+![Appendice A.](./readme-images/gait_cycle_design.svg)
