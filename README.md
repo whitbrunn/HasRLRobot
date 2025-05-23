@@ -44,6 +44,7 @@ Second, run the following command to check the training process.
 $ tensorboard --logdir=./trained_models/ppo--------------(copying the full path would be recommended)
 ```
 
+![The tensorboard.](./readme-images/tensorboard.png)
 
 Third, run `eval.py` directly, and a video will show out.
 
@@ -62,7 +63,7 @@ The authors would like to express heartfelt thanks to Prof. Guillaume Adrien Sar
 ## Reference
 *[1] Adapted from https://github.com/osudrl/cassie-mujoco-sim, https://github.com/lbermillo/cassie-curriculum-learning/ and https://github.com/XHN-1/Cassie_mujoco_RL.*
 
-*[2] Adapted from https://github.com/Lizhi-sjtu/DRL-code-pytorch*
+*[2] Adapted from https://github.com/Lizhi-sjtu/DRL-code-pytorch.*
 
 
 ---
