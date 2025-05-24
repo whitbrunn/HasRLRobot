@@ -32,31 +32,40 @@ $conda install -c conda-forge gym=0.21.0
 
 2.2 Usage
 
-First, then activate the conda environment, run the `train.py` to train the robot agent model.
+First, then activate the conda environment, run the `train.py` to train the robot agent model, e.g.,
 
 ```
-$ python train.py
+$ python train.py --num_steps 2000 --entropy_coeff 0.001 --max_traj_len 100 \
+--lr_a 1e-3 --lr_c 1e-3 --hidden_width 256 --num_procs 2 --minibatch_size 20 
 ```
 
 Second, run the following command to check the training process.
 
 ```
-$ tensorboard --logdir=./trained_models/ppo--------------(copying the full path would be recommended)
+$ tensorboard --logdir=/home/.../This_Project_Dir/trained_models/ppo
+
+# Note: Copying the full path would be recommended
 ```
 
 ![The tensorboard.](./readme-images/tensorboard.png)
 
-Third, run `eval.py` directly, and a video will show out.
+Third, run `eval.py` directly, and a video will show out with `Total reward` displaying in the terminal.
+
+E.g.,
 
 ```
-python eval.py model_path=----------------------(set you model path)
+python eval.py --exp_id 0524-16-20-23-s42
+
+# Note:
+# 1. If output "Segmentation fault (core dumped)", it is normal, try to run the command again.
+# 2. The exp_id is set defaultly as your latest one.
 ```
 
 
 
 ## 3 One more thing
 
-The authors would like to express heartfelt thanks to Prof. Guillaume Adrien Sartoretti@NUS, for his invaluable guidance. The author also would like to thank so many companies are hiring RL engineering. Now I am still open-hiring, please contact maij@u.nus.edu if you are willing to offer an opportunity.
+The authors would like to express heartfelt thanks to Prof. Guillaume Adrien Sartoretti@NUS, for his invaluable guidance. The author also thanks his teammates Duhy and Guozc for their fundamental works. The author also would like to feel grateful for so many companies hiring RL engineering in my home country. Now I am still open-hiring, please contact maij@u.nus.edu if you are willing to offer an opportunity.
 
 
 

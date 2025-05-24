@@ -124,19 +124,14 @@ class CassieEnv(gym.Env):
 
 
 
-
-
-
-
-
-
-
         self.l_foot_frc = 0
         self.r_foot_frc = 0
         self.l_foot_vel = np.zeros(3)
         self.r_foot_vel = np.zeros(3)
         self.l_foot_pos = np.zeros(3)
         self.r_foot_pos = np.zeros(3)
+
+        self.max_clock_reward = 1.2
 
         self.last_pelvis_pos = self.cassim.qpos()[0:3]
 
@@ -281,7 +276,7 @@ class CassieEnv(gym.Env):
 
             foot_forces = self.cassim.get_foot_forces()
 
-
+            # print(f"Here is gym, foot force:{foot_forces}")
 
             self.l_foot_frc += foot_forces[0]
             self.r_foot_frc += foot_forces[1]
@@ -508,10 +503,10 @@ class CassieEnv(gym.Env):
         pelvis_motion = straight_diff + height_diff + pelvis_acc
 
 
-        left_frc_clock = self.left_clock[0](self.phase)
-        right_frc_clock = self.right_clock[0](self.phase)
-        left_vel_clock = self.left_clock[1](self.phase)
-        right_vel_clock = self.right_clock[1](self.phase)
+        left_frc_clock = self.max_clock_reward*self.left_clock[0](self.phase)
+        right_frc_clock = self.max_clock_reward*self.right_clock[0](self.phase)
+        left_vel_clock = self.max_clock_reward*self.left_clock[1](self.phase)
+        right_vel_clock = self.max_clock_reward*self.right_clock[1](self.phase)
 
         left_frc_score = np.tan(np.pi / 4 * left_frc_clock * normed_left_frc)
 

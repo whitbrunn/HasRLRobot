@@ -80,6 +80,5 @@ def create_logger(args):
 def parse_previous(args):
     if args.previous is not None:
         run_args = pickle.load(open(args.previous + "experiment.pkl", "rb"))
-        args.recurrent = run_args.recurrent
         args.learn_gains = False
     return args

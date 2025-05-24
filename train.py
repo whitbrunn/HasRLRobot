@@ -5,20 +5,28 @@ from torch.nn.utils.rnn import pad_sequence
 import numpy as np
 import argparse
 import os
-from time import time
+from time import time, sleep
 from datetime import datetime
 from ppo import PPO_Agent, PPOBuffer, buffer_merge
 from utils import env_factory, WrapEnv, create_logger
 
 import ray
 
-def model_save(save_path, policy, critic):
+
+def set_seed(seed, device):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    # 如果使用了 GPU，建议加上这行：
+    if device == torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+def model_save(save_path, agent):
     if not os.path.exists(save_path):
         os.makedirs(save_path) 
     
-    filetype = ".pt"  # pytorch model
-    torch.save(policy, os.path.join(save_path, "actor" + filetype))# 保存为pt文件
-    torch.save(critic, os.path.join(save_path, "critic" + filetype))
+    torch.save(agent.actor, os.path.join(save_path, "actor.pt"))
+    torch.save(agent.critic, os.path.join(save_path, "critic.pt"))
 
 
 @ray.remote(num_gpus=1)# 并行化采样
@@ -118,7 +126,8 @@ def train(args):
 
     highest_reward = -1
     
-    logger = create_logger(args)
+    if args.debugger == False:
+        logger = create_logger(args)
 
     env_fn = env_factory(args.env_name)
     args.state_dim = env_fn().observation_space.shape[0]
@@ -134,8 +143,7 @@ def train(args):
             ray.init(num_cpus=args.num_procs, num_gpus=args.num_gpus)
 
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
+    set_seed(args.seed, device)
 
 
     agent = PPO_Agent(args,device)
@@ -162,12 +170,16 @@ def train(args):
 
         while total_steps < num_steps:
             total_steps, result = sample_parallel(worker, w_args, workers, total_steps,result)
+
+            if args.debugger == True:
+                sleep(2)
         batch = buffer_merge(result, gamma,lam)
 
         samp_time = time() - sample_start
 
+        num_trajs = len(batch.traj_idx)-1
         # print(f"Here is train, batch traj indx: {batch.traj_idx}")
-        print(f"Here is train, batch traj nums: {len(batch.traj_idx)-1}")
+        print(f"Here is train, batch traj nums: {num_trajs}")
         # print(f"Here is train, batch reward nums: {len(batch.rewards)}")
         print(f"Here is train, batch return nums: {len(batch.returns)}")
 
@@ -183,10 +195,10 @@ def train(args):
         optimizer_start = time()
         
 
-        random_indices = SubsetRandomSampler(range(len(batch.traj_idx) - 1)) # 首先使用 SubsetRandomSampler 从轨迹
+        random_indices = SubsetRandomSampler(range(num_trajs)) # 首先使用 SubsetRandomSampler 从轨迹
 
         if minibatch_size > len(random_indices):
-            minibatch_size = len(random_indices) //10
+            minibatch_size = num_trajs
         hidden1, hidden2 = agent.actor.init_hidden_state(minibatch_size)
         sampler = BatchSampler(random_indices, minibatch_size, drop_last=True)
         
@@ -230,7 +242,7 @@ def train(args):
 
         if highest_reward < avg_eval_reward:
             highest_reward = avg_eval_reward
-            model_save(logger.dir, agent.actor, agent.critic) # 如果当前的评估奖励 (avg_eval_reward) 大于之前记录的最高奖励avg_eval_reward
+            model_save(logger.dir, agent) # 如果当前的评估奖励 (avg_eval_reward) 大于之前记录的最高奖励avg_eval_reward
             # 则更新最高奖励并保存模型的参数
 
 if __name__ == "__main__":
@@ -241,7 +253,7 @@ if __name__ == "__main__":
     parser.add_argument("--learn_gains", default=False, action='store_true', dest='learn_gains')####是否学习增益#######
     parser.add_argument("--previous", type=str, default=None)
     parser.add_argument("--logdir", type=str, default="./trained_models/ppo/")  # Where to log diagnostics to
-    parser.add_argument("--seed", default=3737, type=int)  # 设置Gym随机种子
+    parser.add_argument("--seed", default=37, type=int)  # 设置Gym随机种子
     parser.add_argument("--history", default=0, type=int)  # number of previous states
     parser.add_argument("--redis_address", type=str, default=None)  # redis
     parser.add_argument("--env_name", default="me5418-Cassie-v0")
@@ -260,21 +272,36 @@ if __name__ == "__main__":
     parser.add_argument("--learn_stddev", default=False, action='store_true', help="learn std_dev or keep it fixed")
     parser.add_argument("--anneal", default=1.0, action='store_true', help="anneal rate for stddev")##退火###
     parser.add_argument("--std_dev", type=int, default=-1.5, help="exponent of exploration std_dev")
-    parser.add_argument("--entropy_coeff", type=float, default=0.0, help="Coefficient for entropy regularization")
-    parser.add_argument("--clip", type=float, default=0.1,help="Clipping parameter for PPO surrogate loss")
-    parser.add_argument("--minibatch_size", type=int, default=40, help="Batch size for PPO updates")###############PPO 更新时的minibatch大小############
+    parser.add_argument("--entropy_coeff", type=float, default=0.01, help="Coefficient for entropy regularization")
+    parser.add_argument("--clip", type=float, default=0.3,help="Clipping parameter for PPO surrogate loss")
+    parser.add_argument("--minibatch_size", type=int, default=50, help="Batch size for PPO updates")###############PPO 更新时的minibatch大小############
     parser.add_argument("--epochs", type=int, default=10, help="Number of optimization epochs per PPO update")  ############epoch################
-    parser.add_argument("--num_steps", type=int, default=8000,help="Number of sampled ")##每次梯度估计采样步数###
+    parser.add_argument("--num_steps", type=int, default=1000,help="Number of sampled ")##每次梯度估计采样步数###
     parser.add_argument("--use_gae", type=bool, default=True,help="GAE")
     parser.add_argument("--num_procs", type=int, default=2, help="Number of threads to train on")###################并行化采样的步数#############
     parser.add_argument("--max_grad_norm", type=float, default=0.05, help="Value to clip gradients at.")#梯度裁剪的最大值#
-    parser.add_argument("--max_traj_len", type=int, default=100, help="Max traj horizon")#最大轨迹长度#
-    parser.add_argument("--recurrent", default=True)#####是否使用LSTM##############
+    parser.add_argument("--max_traj_len", type=int, default=20, help="Max traj horizon")#最大轨迹长度#
     parser.add_argument("--bounded", type=bool, default=False)
-    
-
+    parser.add_argument("--debugger", type=bool, default=False)
     args = parser.parse_args()
 
+    print()
+    print("Synchronous Distributed Proximal Policy Optimization:")
+    print(" ├ seed:           {}".format(args.seed))
+    print(" ├ num procs:      {}".format(args.num_procs))
+    print(" ├ lr_a:           {}".format(args.lr_a))
+    print(" ├ lr_c:           {}".format(args.lr_c))
+    print(" ├ lam:            {}".format(args.lam))
+    print(" ├ gamma:          {}".format(args.gamma))
+    print(" ├ learn stddev:   {}".format(args.learn_stddev))
+    print(" ├ entropy coeff:  {}".format(args.entropy_coeff))
+    print(" ├ clip:           {}".format(args.clip))
+    print(" ├ minibatch size: {}".format(args.minibatch_size))
+    print(" ├ epochs:         {}".format(args.epochs))
+    print(" ├ num steps:      {}".format(args.num_steps))
+    print(" ├ max traj len:   {}".format(args.max_traj_len))
+    print(" └ debugger:       {}".format(args.debugger))
+    print()
     train(args)
 
 
