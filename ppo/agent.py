@@ -11,70 +11,6 @@ def orthogonal_init(layer, gain=1.0):
     nn.init.constant_(layer.bias, 0)
 
 
-class Actor_Beta(nn.Module):
-    def __init__(self, args):
-        super(Actor_Beta, self).__init__()
-        self.fc1 = nn.Linear(args.state_dim, args.hidden_width)
-        self.fc2 = nn.Linear(args.hidden_width, args.hidden_width)
-        self.alpha_layer = nn.Linear(args.hidden_width, args.action_dim)
-        self.beta_layer = nn.Linear(args.hidden_width, args.action_dim)
-        self.activate_func = [nn.ReLU(), nn.Tanh()][args.use_tanh]  # Trick10: use tanh
-
-        if args.use_orthogonal_init:
-            print("------use_orthogonal_init------")
-            orthogonal_init(self.fc1)
-            orthogonal_init(self.fc2)
-            orthogonal_init(self.alpha_layer, gain=0.01)
-            orthogonal_init(self.beta_layer, gain=0.01)
-
-    def forward(self, s):
-        s = self.activate_func(self.fc1(s))
-        s = self.activate_func(self.fc2(s))
-        # alpha and beta need to be larger than 1,so we use 'softplus' as the activation function and then plus 1
-        alpha = F.softplus(self.alpha_layer(s)) + 1.0
-        beta = F.softplus(self.beta_layer(s)) + 1.0
-        return alpha, beta
-
-    def get_dist(self, s):
-        alpha, beta = self.forward(s)
-        dist = Beta(alpha, beta)
-        return dist
-
-    def mean(self, s):
-        alpha, beta = self.forward(s)
-        mean = alpha / (alpha + beta)  # The mean of the beta distribution
-        return mean
-
-
-class Actor_Gaussian(nn.Module):
-    def __init__(self, args):
-        super(Actor_Gaussian, self).__init__()
-        self.max_action = args.max_action
-        self.fc1 = nn.Linear(args.state_dim, args.hidden_width)
-        self.fc2 = nn.Linear(args.hidden_width, args.hidden_width)
-        self.mean_layer = nn.Linear(args.hidden_width, args.action_dim)
-        self.log_std = nn.Parameter(torch.zeros(1, args.action_dim))  # We use 'nn.Parameter' to train log_std automatically
-        self.activate_func = [nn.ReLU(), nn.Tanh()][args.use_tanh]  # Trick10: use tanh
-
-        if args.use_orthogonal_init:
-            print("------use_orthogonal_init------")
-            orthogonal_init(self.fc1)
-            orthogonal_init(self.fc2)
-            orthogonal_init(self.mean_layer, gain=0.01)
-
-    def forward(self, s):
-        s = self.activate_func(self.fc1(s))
-        s = self.activate_func(self.fc2(s))
-        mean = self.max_action * torch.tanh(self.mean_layer(s))  # [-1,1]->[-max_action,max_action]
-        return mean
-
-    def get_dist(self, s):
-        mean = self.forward(s)
-        log_std = self.log_std.expand_as(mean)  # To make 'log_std' have the same dimension as 'mean'
-        std = torch.exp(log_std)  # The reason we train the 'log_std' is to ensure std=exp(log_std)>0
-        dist = Normal(mean, std)  # Get the Gaussian distribution
-        return dist
-
 class Actor_LSTM(nn.Module):
     def __init__(self, args, device, dist_type="Gaussian"):
         super(Actor_LSTM, self).__init__()
@@ -125,7 +61,7 @@ class Actor_LSTM(nn.Module):
         mean = self.max_action * torch.tanh(self.mean_layer(out2))
         log_std = self.log_std.expand_as(mean)
         std = torch.exp(log_std)
-        return mean, std, ((h1[0].detach(),h1[1].detach()), (h2[0].detach(),h2[1].detach()))
+        return mean, std, (h1, h2)
 
     def get_dist(self, s, hidden1=None, hidden2=None):
         orig_shape = s.shape
@@ -147,8 +83,8 @@ class Actor_LSTM(nn.Module):
         elif len(orig_shape) == 2:
             mean = mean.squeeze(0)
             std = std.squeeze(0)
-
-        return Normal(mean, std),(h1,h2)
+        # detach(), cut the backprogation path
+        return Normal(mean, std),((h1[0].detach(),h1[1].detach()), (h2[0].detach(),h2[1].detach()))
 
 
 class Critic(nn.Module):
@@ -220,21 +156,21 @@ class PPO_Agent():
             a = self.actor(s).detach().numpy().flatten()
         return a
 
-    def choose_action(self, s):
+    def choose_action(self, s, hidden1, hidden2):
         s = torch.tensor(s, dtype=torch.float, device=self.device)
         # print(f"\nHere is choose_action, {s.shape}.\n")
         
         with torch.no_grad():
-            dist,_ = self.actor.get_dist(s)
+            dist,(h1, h2) = self.actor.get_dist(s, hidden1, hidden2)
             a = dist.sample()  # Sample the action according to the probability distribution
             a = torch.clamp(a, -self.max_action, self.max_action)  # [-max,max]
             a_logprob = dist.log_prob(a)  # The log probability density of the action
             # print(f"Here is choose_action, a_logprob:{a_logprob}")
             # print(f"Here is choose_action, a:{a.cpu().numpy().flatten()}")
             # print(f"Here is choose_action, a_logprob:{a_logprob.cpu().numpy().flatten()}")
-        return a.cpu().numpy().flatten(), a_logprob.cpu().numpy().flatten()
+        return a.cpu().numpy().flatten(), a_logprob.cpu().numpy().flatten(), (h1, h2)
 
-    def update(self, obs_batch, action_batch,alogp_batch, return_batch, adv_batch, hidden1=None, hidden2=None):
+    def update(self, obs_batch, action_batch,alogp_batch, return_batch, adv_batch):
         # print(f"\nHere is update, {obs_batch.shape}.\n")
         # print(f"\nHere is update, {action_batch.shape}.\n")
         # print(f"\nHere is update, {alogp_batch.shape}.\n")
@@ -243,7 +179,7 @@ class PPO_Agent():
 
         # Optimize policy for K epochs:
         for _ in range(self.K_epochs):
-            dist_now, (h1,h2) = self.actor.get_dist(obs_batch, hidden1, hidden2)
+            dist_now, _ = self.actor.get_dist(obs_batch)
             values = self.critic(obs_batch)
 
             dist_entropy = dist_now.entropy()
@@ -268,7 +204,7 @@ class PPO_Agent():
             
             torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
             self.optimizer_critic.step()
-        return h1, h2
+        return actor_loss.mean().item(), critic_loss.item(), ratios.mean().item()
 
     def lr_decay(self, total_steps):
         lr_a_now = self.lr_a * (1 - total_steps / self.max_train_steps)

@@ -48,16 +48,17 @@ def sample(agent, gamma, lam, env_fn, min_steps, max_traj_len, device, term_thre
         value = 0
         traj_len = 0
 
-        if hasattr(agent.actor, 'init_hidden_state'): # 检查策略网络是否有 init_hidden_state 方法，从而
-            # 每次让隐藏状态都重置到初始状态
-            agent.actor.init_hidden_state()
+        
+        hidden1, hidden2 = agent.actor.init_hidden_state()
+        # print("Here is sample, actor init")
 
         if hasattr(agent.critic, 'init_hidden_state'): # 检查价值网络
             agent.critic.init_hidden_state()
+            print("Here is sample, critic init")
 
         # 在轨迹结束前，生成动作，计算状态的价值，进行环境交互，并将结果存储到 memory
         while not done and traj_len < max_traj_len:
-            action, a_logprob = agent.choose_action(state) 
+            action, a_logprob , (hidden1, hidden2) = agent.choose_action(state, hidden1, hidden2) 
             # print(f"Here is sample, a_logprob:{a_logprob}")
             # deterministic=False：表示使用随机策略，允许探索行为。如果设置为 True，策略将输出确定性动作，通常用于评估阶段
             # anneal=anneal：可以是一个控制探索与利用权衡的参数，用于调整动作的随机性，通常用于逐步减少探索
@@ -199,7 +200,6 @@ def train(args):
 
         if minibatch_size > len(random_indices):
             minibatch_size = num_trajs
-        hidden1, hidden2 = agent.actor.init_hidden_state(minibatch_size)
         sampler = BatchSampler(random_indices, minibatch_size, drop_last=True)
         
         for indices in sampler:
@@ -216,7 +216,7 @@ def train(args):
             return_batch = pad_sequence(return_batch, batch_first=True)
             advantage_batch = pad_sequence(advantage_batch, batch_first=True)
             
-            hidden1, hidden2 = agent.update(obs_batch, action_batch,alogp_batch, return_batch, advantage_batch, hidden1, hidden2)
+            actor_loss, critic_loss, ratio_mean = agent.update(obs_batch, action_batch,alogp_batch, return_batch, advantage_batch)
 
         opt_time = time() - optimizer_start
 
@@ -231,9 +231,11 @@ def train(args):
             avg_batch_reward = np.mean(batch.ep_returns)
             avg_ep_len = np.mean(batch.ep_lens)
 
+            logger.add_scalar("Train/Actor Loss", actor_loss, itr)
+            logger.add_scalar("Train/Critic Loss", critic_loss, itr)
+            logger.add_scalar("Train/Ratio(Mean)", ratio_mean, itr)
 
             logger.add_scalar("Rewards/Test", avg_eval_reward, itr)
-
             logger.add_scalar("Rewards/Train", avg_batch_reward, itr)
 
             logger.add_scalar("T/Sample Times", samp_time, itr)
