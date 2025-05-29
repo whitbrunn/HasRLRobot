@@ -132,6 +132,7 @@ class CassieEnv(gym.Env):
         self.r_foot_pos = np.zeros(3)
 
         self.max_clock_reward = 1.2
+        self.reward_scale =2
 
         self.last_pelvis_pos = self.cassim.qpos()[0:3]
 
@@ -531,7 +532,7 @@ class CassieEnv(gym.Env):
                  0.050 * np.exp(-hip_roll_penalty) + \
                  0.025 * np.exp(-torque_penalty) + \
                  0.025 * np.exp(-action_penalty)
-        return reward
+        return reward*self.reward_scale
 
     def _get_obs(self):
         clock = [np.sin(2 * np.pi * self.phase / self.phaselen),

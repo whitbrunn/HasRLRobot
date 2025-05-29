@@ -127,6 +127,7 @@ def train(args):
 
     highest_reward = -1
     
+    logger = None
     if args.debugger == False:
         logger = create_logger(args)
 
@@ -190,7 +191,7 @@ def train(args):
         )
         
         advantages = returns - values
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
+        advantages = args.adv_scale*(advantages - advantages.mean()) / (advantages.std() + 1e-5)
         
         
         optimizer_start = time()
@@ -216,8 +217,8 @@ def train(args):
             return_batch = pad_sequence(return_batch, batch_first=True)
             advantage_batch = pad_sequence(advantage_batch, batch_first=True)
             
-            actor_loss, critic_loss, ratio_mean = agent.update(obs_batch, action_batch,alogp_batch, return_batch, advantage_batch)
-
+            actor_loss, entropy_mean,critic_loss, ratio_mean = agent.update(obs_batch, action_batch,alogp_batch, return_batch, advantage_batch)
+            # print(f"Here is train, entropy{entropy_mean}")
         opt_time = time() - optimizer_start
 
 
@@ -232,6 +233,7 @@ def train(args):
             avg_ep_len = np.mean(batch.ep_lens)
 
             logger.add_scalar("Train/Actor Loss", actor_loss, itr)
+            logger.add_scalar("Train/Entopy(Mean)", entropy_mean, itr)
             logger.add_scalar("Train/Critic Loss", critic_loss, itr)
             logger.add_scalar("Train/Ratio(Mean)", ratio_mean, itr)
 
@@ -242,10 +244,10 @@ def train(args):
             logger.add_scalar("T/Optimize Times", opt_time, itr)
             logger.add_scalar("T/Test Times", eval_time, itr)
 
-        if highest_reward < avg_eval_reward:
-            highest_reward = avg_eval_reward
-            model_save(logger.dir, agent) # 如果当前的评估奖励 (avg_eval_reward) 大于之前记录的最高奖励avg_eval_reward
-            # 则更新最高奖励并保存模型的参数
+            if highest_reward < avg_eval_reward:
+                highest_reward = avg_eval_reward
+                model_save(logger.dir, agent) # 如果当前的评估奖励 (avg_eval_reward) 大于之前记录的最高奖励avg_eval_reward
+                # 则更新最高奖励并保存模型的参数
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -261,7 +263,7 @@ if __name__ == "__main__":
     parser.add_argument("--env_name", default="me5418-Cassie-v0")
     # PPO algo args
     parser.add_argument("--input_norm_steps", type=int, default=50)###########输入归一化的步数################
-    parser.add_argument("--n_itr", type=int, default=1000, help="Number of iterations of the learning algorithm")#############迭代轮数###############
+    parser.add_argument("--n_itr", type=int, default=10000, help="Number of iterations of the learning algorithm")#############迭代轮数###############
     parser.add_argument("--hidden_width", type=int, default=128, help="The number of neurons in hidden layers of the neural network")
     parser.add_argument("--lr_a", type=float, default=3e-4, help="Learning rate of actor")
     parser.add_argument("--lr_c", type=float, default=3e-4, help="Learning rate of critic")
@@ -276,6 +278,10 @@ if __name__ == "__main__":
     parser.add_argument("--std_dev", type=int, default=-1.5, help="exponent of exploration std_dev")
     parser.add_argument("--entropy_coeff", type=float, default=0.01, help="Coefficient for entropy regularization")
     parser.add_argument("--clip", type=float, default=0.3,help="Clipping parameter for PPO surrogate loss")
+
+    parser.add_argument("--critic_loss_scale", type=float, default=1.,help="critic loss scale in agent update")
+    
+
     parser.add_argument("--minibatch_size", type=int, default=50, help="Batch size for PPO updates")###############PPO 更新时的minibatch大小############
     parser.add_argument("--epochs", type=int, default=10, help="Number of optimization epochs per PPO update")  ############epoch################
     parser.add_argument("--num_steps", type=int, default=1000,help="Number of sampled ")##每次梯度估计采样步数###
@@ -283,8 +289,9 @@ if __name__ == "__main__":
     parser.add_argument("--num_procs", type=int, default=2, help="Number of threads to train on")###################并行化采样的步数#############
     parser.add_argument("--max_grad_norm", type=float, default=0.05, help="Value to clip gradients at.")#梯度裁剪的最大值#
     parser.add_argument("--max_traj_len", type=int, default=20, help="Max traj horizon")#最大轨迹长度#
+    parser.add_argument("--adv_scale", type=int, default=1, help="Max advantage.")#最大轨迹长度#
     parser.add_argument("--bounded", type=bool, default=False)
-    parser.add_argument("--debugger", type=bool, default=False)
+    parser.add_argument("--debugger", action='store_true', help="set the debugger mode")
     args = parser.parse_args()
 
     print()

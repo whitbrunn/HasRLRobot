@@ -126,7 +126,8 @@ class PPO_Agent():
     def __init__(self, args, device):
         self.policy_dist = "Gaussian"
         self.max_action = args.max_action
-        
+        self.critic_loss_scale = args.critic_loss_scale
+
         self.max_train_steps = args.num_steps
         self.lr_a = args.lr_a  # Learning rate of actor
         self.lr_c = args.lr_c  # Learning rate of critic
@@ -197,14 +198,14 @@ class PPO_Agent():
             torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 0.5)
             self.optimizer_actor.step()
 
-            critic_loss = F.mse_loss(return_batch, values)
+            critic_loss = self.critic_loss_scale* F.mse_loss(return_batch, values)
             # Update critic
             self.optimizer_critic.zero_grad()
             critic_loss.backward()
             
             torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
             self.optimizer_critic.step()
-        return actor_loss.mean().item(), critic_loss.item(), ratios.mean().item()
+        return actor_loss.mean().item(), dist_entropy.mean().item(), critic_loss.item(), ratios.mean().item()
 
     def lr_decay(self, total_steps):
         lr_a_now = self.lr_a * (1 - total_steps / self.max_train_steps)

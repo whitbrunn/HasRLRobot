@@ -35,8 +35,8 @@ $conda install -c conda-forge gym=0.21.0
 First, then activate the conda environment, run the `train.py` to train the robot agent model, e.g.,
 
 ```
-$ python train.py --num_steps 2000 --entropy_coeff 0.001 --max_traj_len 100 \
---lr_a 1e-3 --lr_c 1e-3 --hidden_width 256 --num_procs 2 --minibatch_size 20 
+$ python train.py --num_steps 2000 --entropy_coeff 0.0005 --max_traj_len 100 \
+--lr_a 1e-3 --lr_c 1e-3 --hidden_width 256 --num_procs 2 --minibatch_size 100 --critic_loss_scale 2 --seed 3737
 ```
 
 Second, run the following command to check the training process.
