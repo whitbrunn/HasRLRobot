@@ -16,7 +16,7 @@ The framework of CassieGymRL: PPO is All You Need is shown below:
 
 2.1 Installation
 
-1) Environment
+1) Environment,
 
 - `Ubuntu20.04`
 - `Python 3.9`
@@ -27,13 +27,13 @@ Note:
 - If encounter `ERROR: Could not open activation key file (null)`, it is a mujoco error, try to add `export MUJOCO_KEY_PATH=/path/to/.mujoco/mjkey.txt` to the last line of `~/.bashrc`, then `source ~/.bashrc`[3].
 
 
-2) Install `gym=0.21`
+2) Install `gym=0.21`,
 
 ```
 $conda install -c conda-forge gym=0.21.0
 ```
 
-3) Install other dependencies
+3) Install other dependencies,
 
 ```
 pip install -r requirements.txt
@@ -42,14 +42,14 @@ pip install -r requirements.txt
 
 2.2 Usage
 
-First, then activate the conda environment, run the `train.py` to train the robot agent model, e.g.,
+First, run the `train.py` to train the robot agent model, e.g.,
 
 ```
 $ python train.py --num_steps 2000 --entropy_coeff 0.0005 --max_traj_len 100 \
 --lr_a 1e-3 --lr_c 1e-3 --hidden_width 256 --num_procs 2 --minibatch_size 100 --critic_loss_scale 2 --seed 3737
 ```
 
-Second, run the following command to check the training process.
+Second, open another terminal, run the following command to check the training process,
 
 ```
 $ tensorboard --logdir=/home/.../This_Project_Dir/trained_models/ppo
