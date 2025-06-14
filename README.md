@@ -18,15 +18,25 @@ The framework of CassieGymRL: PPO is All You Need is shown below:
 
 1) Environment
 
-You must install the following environment:
+- `Ubuntu20.04`
+- `Python 3.9`
+- `Pytorch 2.4.0`
+- `MUJOCO2.0.0`
 
-`Ubuntu20.04`, `Python 3.9`, `Pytorch 2.40`, `MUJOCO2.0.0`
+Note:
+- If encounter `ERROR: Could not open activation key file (null)`, it is a mujoco error, try to add `export MUJOCO_KEY_PATH=/path/to/.mujoco/mjkey.txt` to the last line of `~/.bashrc`, then `source ~/.bashrc`[3].
 
 
-2) Install gym=0.21
+2) Install `gym=0.21`
 
 ```
 $conda install -c conda-forge gym=0.21.0
+```
+
+3) Install other dependencies
+
+```
+pip install -r requirements.txt
 ```
 
 
@@ -65,7 +75,7 @@ python eval.py --exp_id 0524-16-20-23-s42
 
 ## 3 One more thing
 
-The authors would like to express heartfelt thanks to Prof. Guillaume Adrien Sartoretti@NUS, for his invaluable guidance. The author also thanks his teammates Duhy and Guozc for their fundamental works. The author also would like to feel grateful for so many companies hiring RL engineering in my home country. Now I am still open-hiring, please contact maij@u.nus.edu if you are willing to offer an opportunity.
+The authors would like to express heartfelt thanks to Prof. Guillaume Adrien Sartoretti@NUS, for his invaluable guidance. The author also thanks his teammates Duhy and Guozc for their fundamental works.
 
 
 
@@ -74,6 +84,7 @@ The authors would like to express heartfelt thanks to Prof. Guillaume Adrien Sar
 
 *[2] Adapted from https://github.com/Lizhi-sjtu/DRL-code-pytorch.*
 
+*[3] https://github.com/osudrl/apex/issues/25.*
 
 ---
 

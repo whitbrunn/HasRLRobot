@@ -1,0 +1,6 @@
+numpy==1.23.5
+torchsummary>=1.5.1
+matplotlib>=3.4.3
+ray==2.39.0
+tensorboard==2.18.0
+scipy==1.13.1
