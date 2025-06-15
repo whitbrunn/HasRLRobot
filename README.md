@@ -1,4 +1,12 @@
 # CassieGymRL: PPO is All You Need
+
+
+## TODO
+
+- [ ] 修改异步框架， https://chatgpt.com/share/684d4bef-2ee4-8001-8c1b-13424b951f91
+- [ ] 调整合理的异步训练参数
+
+
 ## 1 What we have
 
 - Cassie OpenAI Gym environment*[1]
