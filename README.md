@@ -1,4 +1,9 @@
 # CassieGymRL: PPO is All You Need
+## TODO
+ - 调整合理的训练参数
+
+ - 论文撰写
+
 ## 1 What we have
 
 - Cassie OpenAI Gym environment*[1]
