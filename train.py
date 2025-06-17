@@ -217,7 +217,12 @@ def train(args):
             return_batch = pad_sequence(return_batch, batch_first=True)
             advantage_batch = pad_sequence(advantage_batch, batch_first=True)
             
-            actor_loss, entropy_mean,critic_loss, ratio_mean = agent.update(obs_batch, action_batch,alogp_batch, return_batch, advantage_batch)
+            actor_loss, entropy_mean,critic_loss, ratio_mean = agent.update(obs_batch, 
+                                                                            action_batch,
+                                                                            alogp_batch, 
+                                                                            return_batch, 
+                                                                            advantage_batch,
+                                                                            itr)
             # print(f"Here is train, entropy{entropy_mean}")
         opt_time = time() - optimizer_start
 
@@ -267,7 +272,7 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_width", type=int, default=128, help="The number of neurons in hidden layers of the neural network")
     parser.add_argument("--lr_a", type=float, default=3e-4, help="Learning rate of actor")
     parser.add_argument("--lr_c", type=float, default=3e-4, help="Learning rate of critic")
-    parser.add_argument("--use_lr_decay", type=bool, default=False)
+    parser.add_argument("--use_lr_decay", type=bool, default=True)
     parser.add_argument("--use_tanh", type=float, default=True, help="Trick 10: tanh activation function")
     parser.add_argument("--use_orthogonal_init", type=bool, default=True, help="Trick 8: orthogonal initialization")
     parser.add_argument("--set_adam_eps", type=bool, default=True, help="use Adam eps")### Adam 优化器的 epsilon 值########
@@ -309,6 +314,7 @@ if __name__ == "__main__":
     print(" ├ epochs:         {}".format(args.epochs))
     print(" ├ num steps:      {}".format(args.num_steps))
     print(" ├ max traj len:   {}".format(args.max_traj_len))
+    print(" ├ use_lr_decay:   {}".format(args.use_lr_decay))
     print(" └ debugger:       {}".format(args.debugger))
     print()
     train(args)

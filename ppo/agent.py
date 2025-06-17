@@ -129,6 +129,7 @@ class PPO_Agent():
         self.critic_loss_scale = args.critic_loss_scale
 
         self.max_train_steps = args.num_steps
+        self.max_n_itr = args.n_itr
         self.lr_a = args.lr_a  # Learning rate of actor
         self.lr_c = args.lr_c  # Learning rate of critic
         self.epsilon = args.clip  # PPO clip parameter
@@ -171,7 +172,7 @@ class PPO_Agent():
             # print(f"Here is choose_action, a_logprob:{a_logprob.cpu().numpy().flatten()}")
         return a.cpu().numpy().flatten(), a_logprob.cpu().numpy().flatten(), (h1, h2)
 
-    def update(self, obs_batch, action_batch,alogp_batch, return_batch, adv_batch):
+    def update(self, obs_batch, action_batch,alogp_batch, return_batch, adv_batch, total_itrs):
         # print(f"\nHere is update, {obs_batch.shape}.\n")
         # print(f"\nHere is update, {action_batch.shape}.\n")
         # print(f"\nHere is update, {alogp_batch.shape}.\n")
@@ -205,11 +206,16 @@ class PPO_Agent():
             
             torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
             self.optimizer_critic.step()
+        
+        if self.use_lr_decay:  # Trick 6:learning rate Decay
+            self.lr_decay(total_itrs)        
+        
+        
         return actor_loss.mean().item(), dist_entropy.mean().item(), critic_loss.item(), ratios.mean().item()
 
-    def lr_decay(self, total_steps):
-        lr_a_now = self.lr_a * (1 - total_steps / self.max_train_steps)
-        lr_c_now = self.lr_c * (1 - total_steps / self.max_train_steps)
+    def lr_decay(self, total_itrs):
+        lr_a_now = self.lr_a * (1 - total_itrs / self.max_n_itr)
+        lr_c_now = self.lr_c * (1 - total_itrs / self.max_n_itr)
         for p in self.optimizer_actor.param_groups:
             p['lr'] = lr_a_now
         for p in self.optimizer_critic.param_groups:
