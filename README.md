@@ -1,4 +1,4 @@
-# CassieGymRL: PPO is All You Need
+# HasRL Robot: A Heterogeneous Asynchronous Reinforcement Learning System for High-Dimensional Bipedal Control
 ## 1 What we have
 
 - Cassie OpenAI Gym environment*[1]
@@ -8,8 +8,8 @@
 - PPO loss-based agent upgrade*[2] on GPU
 - An Intuitive Tensorboard-based training process demonstration
 
-The framework of CassieGymRL: PPO is All You Need is shown below:
-![The overall framework of our method.](./readme-images/framework.svg)
+The framework of HasRL Robot is shown below:
+![The overall framework of our method.](./readme-images/hasrl1.svg)
 
 
 ## 2 How to use
