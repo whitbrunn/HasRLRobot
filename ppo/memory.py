@@ -53,13 +53,20 @@ class PPOBuffer:
         self.ep_returns += [np.sum(rewards)]# 记录轨迹奖励总和与轨迹长度
         self.ep_lens += [len(rewards)]
 
-    def get(self):
+    def get(self, adv_scale):
+        
+
+        returns = np.array(self.returns) 
+        values = np.array(self.values)
+        advantages = returns - values
+        advantages = adv_scale*(advantages - advantages.mean()) / (advantages.std() + 1e-5)
+
         return (
             np.array(self.states),
             np.array(self.actions),
             np.array(self.alogs),
-            np.array(self.returns),
-            np.array(self.values)
+            returns,
+            advantages
         )
 
 

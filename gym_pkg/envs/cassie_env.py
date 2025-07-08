@@ -57,9 +57,10 @@ class CassieEnv(gym.Env):
     }
 
     def __init__(self, simrate=50):
-        self.cassim = CassieSim(modelfile='/home/du/Cassie/Group 43_ME5418_Agent/ME5418_Agent/Agent_train/gym_pkg/envs/cassiemujoco/cassie.xml')
+        config_path = os.path.join(os.path.dirname(__file__), 'cassiemujoco', 'cassie.xml')
+        self.cassim = CassieSim(modelfile=config_path)
         self.vis = None
-        self.config = '/home/du/Cassie/Group 43_ME5418_Agent/ME5418_Agent/Agent_train/gym_pkg/envs/cassiemujoco/cassie.xml'
+        self.config = config_path
         self.command_profile = "clock"
         self.input_profile = "full"
         self.clock_based = True

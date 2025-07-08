@@ -2,3 +2,6 @@ wasted/
 
 train_record/
 
+__pycache__/
+**/__pycache__/
+*.py[cod]

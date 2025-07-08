@@ -61,7 +61,6 @@ def sample(agent, gamma, lam, env_fn, min_steps, max_traj_len, device, term_thre
             action, a_logprob , (hidden1, hidden2) = agent.choose_action(state, hidden1, hidden2) 
             # print(f"Here is sample, a_logprob:{a_logprob}")
             # deterministic=False：表示使用随机策略，允许探索行为。如果设置为 True，策略将输出确定性动作，通常用于评估阶段
-            # anneal=anneal：可以是一个控制探索与利用权衡的参数，用于调整动作的随机性，通常用于逐步减少探索
             with torch.no_grad():    
                 value = agent.critic(torch.from_numpy(state).float().to(device))
                 value = value.cpu().numpy()
@@ -185,17 +184,12 @@ def train(args):
         # print(f"Here is train, batch reward nums: {len(batch.rewards)}")
         print(f"Here is train, batch return nums: {len(batch.returns)}")
 
-        observations, actions, alogps, returns, values = map(
+        observations, actions, alogps, returns, advantages = map(
             lambda x: torch.tensor(x, dtype=torch.float32, device=device),
-            batch.get()
+            batch.get(args.adv_scale)  
         )
         
-        advantages = returns - values
-        advantages = args.adv_scale*(advantages - advantages.mean()) / (advantages.std() + 1e-5)
-        
-        
         optimizer_start = time()
-        
 
         random_indices = SubsetRandomSampler(range(num_trajs)) # 首先使用 SubsetRandomSampler 从轨迹
 
@@ -256,66 +250,111 @@ def train(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--simrate", default=20, type=int, help="simrate of environment")################simrate##############3
-    parser.add_argument("--run_name", default=None)  # run name
-    parser.add_argument('--num_gpus', type=int, default=1, help='GPU')#GPU数量
-    parser.add_argument("--learn_gains", default=False, action='store_true', dest='learn_gains')####是否学习增益#######
-    parser.add_argument("--previous", type=str, default=None)
-    parser.add_argument("--logdir", type=str, default="./trained_models/ppo/")  # Where to log diagnostics to
-    parser.add_argument("--seed", default=37, type=int)  # 设置Gym随机种子
-    parser.add_argument("--history", default=0, type=int)  # number of previous states
-    parser.add_argument("--redis_address", type=str, default=None)  # redis
-    parser.add_argument("--env_name", default="me5418-Cassie-v0")
-    # PPO algo args
-    parser.add_argument("--input_norm_steps", type=int, default=50)###########输入归一化的步数################
-    parser.add_argument("--n_itr", type=int, default=10000, help="Number of iterations of the learning algorithm")#############迭代轮数###############
-    parser.add_argument("--hidden_width", type=int, default=128, help="The number of neurons in hidden layers of the neural network")
-    parser.add_argument("--lr_a", type=float, default=3e-4, help="Learning rate of actor")
-    parser.add_argument("--lr_c", type=float, default=3e-4, help="Learning rate of critic")
-    parser.add_argument("--use_lr_decay", type=bool, default=True)
-    parser.add_argument("--use_tanh", type=float, default=True, help="Trick 10: tanh activation function")
-    parser.add_argument("--use_orthogonal_init", type=bool, default=True, help="Trick 8: orthogonal initialization")
-    parser.add_argument("--set_adam_eps", type=bool, default=True, help="use Adam eps")### Adam 优化器的 epsilon 值########
-    parser.add_argument("--lam", type=float, default=0.95, help="GAE")#####广义优势估计####
-    parser.add_argument("--gamma", type=float, default=0.99, help="MDP")
-    parser.add_argument("--learn_stddev", default=False, action='store_true', help="learn std_dev or keep it fixed")
-    parser.add_argument("--anneal", default=1.0, action='store_true', help="anneal rate for stddev")##退火###
-    parser.add_argument("--std_dev", type=int, default=-1.5, help="exponent of exploration std_dev")
-    parser.add_argument("--entropy_coeff", type=float, default=0.01, help="Coefficient for entropy regularization")
-    parser.add_argument("--clip", type=float, default=0.3,help="Clipping parameter for PPO surrogate loss")
 
-    parser.add_argument("--critic_loss_scale", type=float, default=1.,help="critic loss scale in agent update")
-    
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ General & Experiment Settings ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    parser.add_argument("--run_name", type=str, default=None,
+                        help="Unique identifier for this training run (used in logs and checkpoints)")
+    parser.add_argument("--previous", type=str, default=None,
+                        help="Path to a previous run to resume or fine-tune from")
+    parser.add_argument("--logdir", type=str, default="./trained_models/ppo/",
+                        help="Root directory for tensorboard logs and saved models")
+    parser.add_argument("--seed", type=int, default=37,
+                        help="Global random seed for reproducibility")
+    parser.add_argument("--debugger", action="store_true",
+                        help="Enable verbose debugging mode")
 
-    parser.add_argument("--minibatch_size", type=int, default=50, help="Batch size for PPO updates")###############PPO 更新时的minibatch大小############
-    parser.add_argument("--epochs", type=int, default=10, help="Number of optimization epochs per PPO update")  ############epoch################
-    parser.add_argument("--num_steps", type=int, default=1000,help="Number of sampled ")##每次梯度估计采样步数###
-    parser.add_argument("--use_gae", type=bool, default=True,help="GAE")
-    parser.add_argument("--num_procs", type=int, default=2, help="Number of threads to train on")###################并行化采样的步数#############
-    parser.add_argument("--max_grad_norm", type=float, default=0.05, help="Value to clip gradients at.")#梯度裁剪的最大值#
-    parser.add_argument("--max_traj_len", type=int, default=20, help="Max traj horizon")#最大轨迹长度#
-    parser.add_argument("--adv_scale", type=int, default=1, help="Max advantage.")#最大轨迹长度#
-    parser.add_argument("--bounded", type=bool, default=False)
-    parser.add_argument("--debugger", action='store_true', help="set the debugger mode")
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Environment & Resource Settings ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    parser.add_argument("--num_gpus", type=int, default=1,
+                        help="Number of GPUs to use")
+    parser.add_argument("--redis_address", type=str, default=None,
+                        help="Redis server address for distributed rollout (if applicable)")
+    parser.add_argument("--env_name", type=str, default="me5418-Cassie-v0",
+                        help="Gym-compatible environment ID")
+
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Network Architecture & Init ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    parser.add_argument("--hidden_width", type=int, default=128,
+                        help="Number of neurons per hidden layer")
+    parser.add_argument("--use_tanh", type=bool, default=True,
+                        help="Use tanh as activation function; otherwise ReLU")
+    parser.add_argument("--use_orthogonal_init", type=bool, default=True,
+                        help="Apply orthogonal weight initialization (PPO Trick 8)")
+    parser.add_argument("--set_adam_eps", type=bool, default=True,
+                        help="Explicitly set Adam's ε to improve numerical stability")
+
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Learning‑Rate & Optimizer ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    parser.add_argument("--lr_a", type=float, default=3e-4,
+                        help="Actor network learning rate")
+    parser.add_argument("--lr_c", type=float, default=3e-4,
+                        help="Critic network learning rate")
+    parser.add_argument("--use_lr_decay", type=bool, default=True,
+                        help="Enable linear learning-rate decay across iterations")
+
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Training Schedule & Sampling ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    parser.add_argument("--n_itr", type=int, default=10000,
+                        help="Total number of training iterations")
+    parser.add_argument("--epochs", type=int, default=2,
+                        help="Optimization epochs per PPO update")
+    parser.add_argument("--minibatch_size", type=int, default=50,
+                        help="Minibatch size for each gradient step")
+    parser.add_argument("--num_steps", type=int, default=1000,
+                        help="Environment steps collected per iteration per worker")
+    parser.add_argument("--num_procs", type=int, default=2,
+                        help="Number of parallel environment workers")
+    parser.add_argument("--max_grad_norm", type=float, default=0.05,
+                        help="Gradient-clipping threshold (L2 norm)")
+    parser.add_argument("--max_traj_len", type=int, default=20,
+                        help="Maximum horizon length of one trajectory")
+    parser.add_argument("--adv_scale", type=float, default=1.0,
+                        help="Scalar to rescale advantages before policy update")
+
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Core RL / PPO Hyper‑parameters ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    parser.add_argument("--gamma", type=float, default=0.99,
+                        help="Discount factor for future rewards")
+    parser.add_argument("--lam", type=float, default=0.95,
+                        help="GAE lambda parameter")
+    parser.add_argument("--use_gae", type=bool, default=False,
+                        help="Enable Generalized Advantage Estimation (GAE)")
+    parser.add_argument("--clip", type=float, default=0.3,
+                        help="PPO clipping parameter for policy ratio")
+    parser.add_argument("--entropy_coeff", type=float, default=0.005,
+                        help="Entropy regularization coefficient")
+    parser.add_argument("--critic_loss_scale", type=float, default=1.0,
+                        help="Weight applied to critic (value) loss in total loss")
+
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Ⓖ Optional Features ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    parser.add_argument("--learn_gains", action="store_true", default=False,
+                        help="Learn feedback gains instead of using fixed values")
+
     args = parser.parse_args()
 
     print()
-    print("Synchronous Distributed Proximal Policy Optimization:")
-    print(" ├ seed:           {}".format(args.seed))
-    print(" ├ num procs:      {}".format(args.num_procs))
-    print(" ├ lr_a:           {}".format(args.lr_a))
-    print(" ├ lr_c:           {}".format(args.lr_c))
-    print(" ├ lam:            {}".format(args.lam))
-    print(" ├ gamma:          {}".format(args.gamma))
-    print(" ├ learn stddev:   {}".format(args.learn_stddev))
-    print(" ├ entropy coeff:  {}".format(args.entropy_coeff))
-    print(" ├ clip:           {}".format(args.clip))
-    print(" ├ minibatch size: {}".format(args.minibatch_size))
-    print(" ├ epochs:         {}".format(args.epochs))
-    print(" ├ num steps:      {}".format(args.num_steps))
-    print(" ├ max traj len:   {}".format(args.max_traj_len))
-    print(" ├ use_lr_decay:   {}".format(args.use_lr_decay))
-    print(" └ debugger:       {}".format(args.debugger))
+    print("Synchronous Distributed PPO Configuration:")
+    print(" ┌──── Experiment Settings")
+    print(" ├ seed:                 {}".format(args.seed))
+    print(" ├ debugger:             {}".format(args.debugger))
+
+    print(" ├──── Parallelism & Environment")
+    print(" ├ num procs:            {}".format(args.num_procs))
+
+    print(" ├──── Learning Rates & Optimizer")
+    print(" ├ lr_actor:             {}".format(args.lr_a))
+    print(" ├ lr_critic:            {}".format(args.lr_c))
+    print(" ├ use_lr_decay:         {}".format(args.use_lr_decay))
+
+    print(" ├──── PPO Core Settings")
+    print(" ├ gamma:                {}".format(args.gamma))
+    print(" ├ lambda:               {}".format(args.lam))
+    print(" ├ entropy coeff:        {}".format(args.entropy_coeff))
+    print(" ├ clip ratio:           {}".format(args.clip))
+
+    print(" ├──── Training Schedule")
+    print(" ├ steps per iter:       {}".format(args.num_steps))
+    print(" ├ minibatch size:       {}".format(args.minibatch_size))
+    print(" ├ epochs per update:    {}".format(args.epochs))
+    print(" ├ max trajectory len:   {}".format(args.max_traj_len))
+
+    print(" └──── Network Config")
+    print("   use orthogonal init:  {}".format(args.use_orthogonal_init))
     print()
     train(args)
 
