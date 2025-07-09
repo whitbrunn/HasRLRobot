@@ -251,7 +251,7 @@ def train(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ General & Experiment Settings ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 1 General & Experiment Settings ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
     parser.add_argument("--run_name", type=str, default=None,
                         help="Unique identifier for this training run (used in logs and checkpoints)")
     parser.add_argument("--previous", type=str, default=None,
@@ -263,7 +263,7 @@ if __name__ == "__main__":
     parser.add_argument("--debugger", action="store_true",
                         help="Enable verbose debugging mode")
 
-    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Environment & Resource Settings ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 2 Environment & Resource Settings ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
     parser.add_argument("--num_gpus", type=int, default=1,
                         help="Number of GPUs to use")
     parser.add_argument("--redis_address", type=str, default=None,
@@ -271,7 +271,7 @@ if __name__ == "__main__":
     parser.add_argument("--env_name", type=str, default="me5418-Cassie-v0",
                         help="Gym-compatible environment ID")
 
-    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Network Architecture & Init ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 3 Network Architecture & Init ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
     parser.add_argument("--hidden_width", type=int, default=128,
                         help="Number of neurons per hidden layer")
     parser.add_argument("--use_tanh", type=bool, default=True,
@@ -281,7 +281,7 @@ if __name__ == "__main__":
     parser.add_argument("--set_adam_eps", type=bool, default=True,
                         help="Explicitly set Adam's ε to improve numerical stability")
 
-    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Learning‑Rate & Optimizer ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 4 Learning‑Rate & Optimizer ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
     parser.add_argument("--lr_a", type=float, default=3e-4,
                         help="Actor network learning rate")
     parser.add_argument("--lr_c", type=float, default=3e-4,
@@ -289,7 +289,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_lr_decay", type=bool, default=True,
                         help="Enable linear learning-rate decay across iterations")
 
-    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Training Schedule & Sampling ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 5 Training Schedule & Sampling ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
     parser.add_argument("--n_itr", type=int, default=10000,
                         help="Total number of training iterations")
     parser.add_argument("--epochs", type=int, default=2,
@@ -307,7 +307,7 @@ if __name__ == "__main__":
     parser.add_argument("--adv_scale", type=float, default=1.0,
                         help="Scalar to rescale advantages before policy update")
 
-    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Core RL / PPO Hyper‑parameters ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 6 Core RL / PPO Hyper‑parameters ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
     parser.add_argument("--gamma", type=float, default=0.99,
                         help="Discount factor for future rewards")
     parser.add_argument("--lam", type=float, default=0.95,
@@ -321,7 +321,7 @@ if __name__ == "__main__":
     parser.add_argument("--critic_loss_scale", type=float, default=1.0,
                         help="Weight applied to critic (value) loss in total loss")
 
-    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ Ⓖ Optional Features ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    # ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝ 7 Optional Features ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
     parser.add_argument("--learn_gains", action="store_true", default=False,
                         help="Learn feedback gains instead of using fixed values")
 
