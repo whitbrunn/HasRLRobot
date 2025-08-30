@@ -9,7 +9,7 @@
 - An Intuitive Tensorboard-based training process demonstration
 
 The framework of HasRL Robot is shown below:
-![The overall framework of our method.](./readme-images/hasrl1.svg)
+![The overall framework of our method.](./assets/hasrl2.svg)
 
 
 ## 2 How to use
@@ -57,7 +57,8 @@ $ tensorboard --logdir=/home/.../This_Project_Dir/trained_models/ppo
 # Note: Copying the full path would be recommended
 ```
 
-![The tensorboard.](./readme-images/tensorboard.png)
+![The tensorboard.](./assets/tensorboard1.png)
+![The tensorboard.](./assets/tensorboard2.png)
 
 Third, run `eval.py` directly, and a video will show out with `Total reward` displaying in the terminal.
 
@@ -90,4 +91,4 @@ The authors would like to express heartfelt thanks to Prof. Guillaume Adrien Sar
 
 Appendice A: Gait Cycle Reward Design (in Gym)
 
-![Appendice A.](./readme-images/gait_cycle_design.svg)
+![Appendice A.](./assets/gait_cycle_design.svg)
